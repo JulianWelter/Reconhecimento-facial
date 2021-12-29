@@ -6,8 +6,18 @@ from multiprocessing.dummy import Pool as ThreadPool
 import cv2
 import face_recognition as fr
 import numpy as np
+from numpy import ndarray
 
 file_faces = 0
+
+
+class MyImage:
+    def __init__(self, img_name):
+        self.img = cv2.imread(img_name)
+        self.__name = img_name
+
+    def __str__(self):
+        return self.__name
 
 
 def get_encoded_faces2():
@@ -19,7 +29,7 @@ def get_encoded_faces2():
     return dict(d)
 
 
-def get_encoded_faces():
+def get_encoded_faces() -> dict[str, ndarray]:
     encoded = {}
 
     for dirpath, dnames, fnames in os.walk("./faces"):
@@ -28,8 +38,10 @@ def get_encoded_faces():
                 face = fr.load_image_file("faces/" + f)
                 encoding = fr.face_encodings(face)[0]
                 encoded[f.split(".")[0]] = encoding
-        with open('encoded.txt', 'w') as convert_file:
-            convert_file.write(str(encoded).replace("array", "").replace("(", "").replace(")", ""))
+        with open('encoded.txt', 'wb') as convert_file:
+            convert_file.write(
+                bytes(str(encoded).replace("array", "").replace("(", "").replace(")", "")
+                      , encoding='utf8'))
 
     return encoded
 
@@ -39,7 +51,14 @@ def recognize_face(face_encoding):
     faces_encoded = list(faces.values())
     known_face_names = list(faces.keys())
 
-    matches = fr.compare_faces(faces_encoded, face_encoding)
+    """ 
+    tolerance: How much distance between faces to consider it a match.
+    Lower is more strict.
+    0.6 is typical best performance.
+    """
+    tolerance = 0.55
+
+    matches = fr.compare_faces(faces_encoded, face_encoding, 0.55)
     name = None
 
     face_distances = fr.face_distance(faces_encoded, face_encoding)
@@ -65,34 +84,56 @@ def timeit(func):
 
 
 @timeit
-def classify_face(im):
-    img = cv2.imread(im, 1)
-    # img = cv2.blur(img, (60, 60))
+def classify_face():
+    cam = cv2.VideoCapture(0)
+    cv2.namedWindow("test")
 
-    face_locations = fr.face_locations(img)
-    unknown_face_encodings = fr.face_encodings(img, face_locations)
+    while True:
+        ret, frame = cam.read()
+        if not ret:
+            print("failed to grab frame")
+            break
 
-    pool = ThreadPool(4)
-    results = pool.map(recognize_face, unknown_face_encodings)
+        face_locations = fr.face_locations(frame)
+        unknown_face_encodings = fr.face_encodings(frame, face_locations)
 
-    for (top, right, bottom, left), name in zip(face_locations, results):
-        if name is None:
-            continue
-        # Draw a box around the face
-        cv2.rectangle(img, (left - 20, top - 20), (right + 20, bottom + 20), (255, 0, 0), 2)
+        pool = ThreadPool(4)
+        results = pool.map(recognize_face, unknown_face_encodings)
+        # Draw label and box
+        for (top, right, bottom, left), name in zip(face_locations, results):
+            # Draw a box around the face
+            cv2.rectangle(frame, (left - 20, top - 20), (right + 20, bottom + 20), (255, 0, 0), 2)
+            # Draw a label with a name below the face
+            cv2.rectangle(frame, (left - 20, bottom - 15), (right + 20, bottom + 20), (255, 0, 0), cv2.FILLED)
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            cv2.putText(frame, name, (left - 20, bottom + 15), font, .8, (255, 255, 255), 2)
 
-        # Draw a label with a name below the face
-        cv2.rectangle(img, (left - 20, bottom - 15), (right + 20, bottom + 20), (255, 0, 0), cv2.FILLED)
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        cv2.putText(img, name, (left - 20, bottom + 15), font, .8, (255, 255, 255), 2)
+        cv2.imshow("test", frame)
+        cv2.waitKey(1)
+    cam.release()
 
-    # Display the resulting image
+    cv2.destroyAllWindows()
 
-    cv2.imshow('foto', img)
-    cv2.waitKey(0)
-    return results
+
+def add_face(face: MyImage):
+    encoded = {}
+
+    encoding = fr.face_encodings(face.img)[0]
+    encoded[str(face).split(".")[0].split("/")[-1]] = encoding
+    with open('encoded.txt', 'ab+') as convert_file:
+        convert_file.seek(-1, os.SEEK_END)
+        convert_file.truncate()
+        convert_file.write(bytes("," + str(encoded).replace("array", "")
+                                 .replace("(", "").replace(")", "")
+                                 .replace("{", ""), encoding='utf8'))
+
+
+@timeit
+def add_faces(faces: list[MyImage]):
+    for face in faces:
+        add_face(face)
 
 
 if __name__ == "__main__":
     file_faces = get_encoded_faces2()
-    print(classify_face("test/grupo2.jpg"))
+    print(classify_face())
