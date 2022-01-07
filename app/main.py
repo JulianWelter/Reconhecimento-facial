@@ -15,11 +15,11 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session
 from sqlalchemy.orm import sessionmaker
 
-from classes.MyImage import MyImage
-from classes.MyImageDTO import MyImageDTO
+from .classes.MyImage import MyImage
+from .classes.MyImageDTO import MyImageDTO
 
 file_faces = {}
-engine = create_engine('postgresql://postgres:root@localhost:5432/python', echo=True)
+engine = create_engine('postgresql://postgres:root@teste-postgres:5432/python', echo=True)
 Base = declarative_base()
 meta = MetaData()
 session_factory = sessionmaker(bind=engine)
@@ -74,7 +74,7 @@ def get_encoded_faces2(file_name=None):
     :param file_name: file name with path to load. encoded.txt are used as default
     """
     if file_name is None:
-        file_name = "encoded.txt"
+        file_name = "../encoded.txt"
     file = open(file_name, "r")
 
     contents = file.read()
@@ -86,13 +86,13 @@ def get_encoded_faces2(file_name=None):
 def get_encoded_faces():
     encoded = {}
 
-    for dirpath, dnames, fnames in os.walk("./faces"):
+    for dirpath, dnames, fnames in os.walk("../faces"):
         for f in fnames:
             if f.endswith(".jpg") or f.endswith(".png"):
                 face = fr.load_image_file("faces/" + f)
                 encoding = fr.face_encodings(face)[0]
                 encoded[f.split(".")[0]] = encoding
-        with open('encoded.txt', 'wb') as convert_file:
+        with open('../encoded.txt', 'wb') as convert_file:
             convert_file.write(
                 bytes(str(encoded).replace("array", "").replace("(", "").replace(")", "")
                       , encoding='utf8'))
@@ -198,8 +198,8 @@ def classify_face():
         #     cv2.putText(frame, name, (left - 20, bottom + 15), font, .8, (255, 255, 255), 2)
         #
 
-        cv2.imshow("teste", frame)
-        cv2.waitKey(1)
+        # cv2.imshow("teste", frame)
+        # cv2.waitKey(1)
         if results and results[0] is not None:
             break
     cam.release()
@@ -212,7 +212,7 @@ def add_face(face: MyImage):
 
     encoding = fr.face_encodings(face.img)[0]
     encoded[str(face).split(".")[0].split("/")[-1]] = encoding
-    with open('encoded.txt', 'ab+') as convert_file:
+    with open('../encoded.txt', 'ab+') as convert_file:
         convert_file.seek(-1, os.SEEK_END)
         convert_file.truncate()
         convert_file.write(bytes("," + str(encoded).replace("array", "")

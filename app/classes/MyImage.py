@@ -7,7 +7,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 #
-engine = create_engine('postgresql://postgres:root@localhost:5432/python', echo=True)
+engine = create_engine('postgresql://postgres:root@teste-postgres:5432/python', echo=True)
 meta = MetaData()
 Base = declarative_base()
 Session = sessionmaker(bind=engine)
