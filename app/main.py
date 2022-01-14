@@ -5,7 +5,7 @@ import random
 import sys
 import time
 from multiprocessing.dummy import Pool as ThreadPool
-
+import dotenv
 import cv2
 import face_recognition as fr
 import numpy as np
@@ -15,11 +15,13 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session
 from sqlalchemy.orm import sessionmaker
 
-from .classes.MyImage import MyImage
-from .classes.MyImageDTO import MyImageDTO
+from classes.MyImage import MyImage
+from classes.MyImageDTO import MyImageDTO
 
+dotenv.load_dotenv(dotenv.find_dotenv())
+
+engine = create_engine(os.getenv("DB"), echo=True)
 file_faces = {}
-engine = create_engine('postgresql://postgres:root@teste-postgres:5432/python', echo=True)
 Base = declarative_base()
 meta = MetaData()
 session_factory = sessionmaker(bind=engine)

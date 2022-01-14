@@ -2,12 +2,14 @@ import base64
 
 import face_recognition as fr
 import numpy as np
+import os
 from sqlalchemy import create_engine, MetaData, Column, Integer, LargeBinary, Sequence, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+import dotenv
 
-#
-engine = create_engine('postgresql://postgres:root@teste-postgres:5432/python', echo=True)
+dotenv.load_dotenv(dotenv.find_dotenv())
+engine = create_engine(os.getenv("DB"), echo=True)
 meta = MetaData()
 Base = declarative_base()
 Session = sessionmaker(bind=engine)
